@@ -87,14 +87,18 @@ fn get_file_header(reader: &mut dyn Read) -> io::Result<()> {
         *pixel = image::Rgb([r, g, b]);
     }
     let file_name = 
-        format!("Save_{}_{}_Level_{}.png", save_number, pc_name.replace(' ', "_"), pc_level);
+        format!("Save_{}_{}_{}_{}.png", 
+                save_number, 
+                pc_name.replace(' ', "_"),
+                pc_location.replace(' ', "_"),
+                playtime.replace("00", "0").replace('.', "_"));
     imgbuf.save(file_name).unwrap();
 
     Ok(())
 }
 
 fn main() -> io::Result<()> {
-    let file = File::open("test2.fos")?;
+    let file = File::open("test.fos")?;
     let mut reader = BufReader::new(file);
 
     get_file_header(&mut reader)?;

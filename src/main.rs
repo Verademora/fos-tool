@@ -1,4 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use image::ImageBuffer;
 use std::{
     fs::File,
     io::{self, BufReader, Read},
@@ -18,8 +19,8 @@ fn get_file_header(reader: &mut dyn Read) -> io::Result<()> {
         panic!("Invalid save file");
     }
 
-    let header_size = reader.read_u32::<LittleEndian>()?;
-    let header_mystery = reader.read_u32::<LittleEndian>()?;
+    let _header_size = reader.read_u32::<LittleEndian>()?;
+    let _header_mystery = reader.read_u32::<LittleEndian>()?;
     reader.read_u8()?;
 
     let mut language = String::new();
@@ -31,9 +32,9 @@ fn get_file_header(reader: &mut dyn Read) -> io::Result<()> {
     }
     reader.read_u8()?;
 
-    let save_img_height = reader.read_u32::<LittleEndian>()?;
-    reader.read_u8()?;
     let save_img_width = reader.read_u32::<LittleEndian>()?;
+    reader.read_u8()?;
+    let save_img_height = reader.read_u32::<LittleEndian>()?;
     reader.read_u8()?;
 
     let save_number = reader.read_u32::<LittleEndian>()?;
@@ -78,11 +79,22 @@ fn get_file_header(reader: &mut dyn Read) -> io::Result<()> {
     }
     reader.read_u8()?;
 
+    let mut imgbuf = ImageBuffer::new(save_img_width, save_img_height);
+    for (_x, _y, pixel) in imgbuf.enumerate_pixels_mut() {
+        let r = reader.read_u8()?;
+        let g = reader.read_u8()?;
+        let b = reader.read_u8()?;
+        *pixel = image::Rgb([r, g, b]);
+    }
+    let file_name = 
+        format!("Save_{}_{}_Level_{}.png", save_number, pc_name.replace(' ', "_"), pc_level);
+    imgbuf.save(file_name).unwrap();
+
     Ok(())
 }
 
 fn main() -> io::Result<()> {
-    let file = File::open("test.fos")?;
+    let file = File::open("test2.fos")?;
     let mut reader = BufReader::new(file);
 
     get_file_header(&mut reader)?;

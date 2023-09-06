@@ -58,7 +58,7 @@ fn get_file_header(reader: &mut dyn Read) -> io::Result<()> {
     }
     reader.read_u8()?;
 
-    let pc_level = reader.read_u32::<LittleEndian>()?;
+    let _pc_level = reader.read_u32::<LittleEndian>()?;
     reader.read_u8()?;
 
     let pc_location_len = reader.read_u16::<LittleEndian>()?;
@@ -86,12 +86,13 @@ fn get_file_header(reader: &mut dyn Read) -> io::Result<()> {
         let b = reader.read_u8()?;
         *pixel = image::Rgb([r, g, b]);
     }
-    let file_name = 
-        format!("Save_{}_{}_{}_{}.png", 
-                save_number, 
-                pc_name.replace(' ', "_"),
-                pc_location.replace(' ', "_"),
-                playtime.replace("00", "0").replace('.', "_"));
+    let file_name = format!(
+        "Save_{}_{}_{}_{}.png",
+        save_number,
+        pc_name.replace(' ', "_"),
+        pc_location.replace(' ', "_"),
+        playtime.replace("00", "0").replace('.', "_")
+    );
     imgbuf.save(file_name).unwrap();
 
     Ok(())

@@ -1,5 +1,6 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{self, ErrorKind, Read};
+use std::mem;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
@@ -18,9 +19,15 @@ pub struct FalloutNVHeader {
     playtime: String,
 }
 
-pub const MAGIC_ID_SIZE: u32 = 11;
-pub const LANGUAGE_SIZE: u32 = 64;
+const MAGIC_ID: &str = "FO3SAVEGAME";
+const MAGIC_ID_SIZE: u32 = 11;
+const MYSTERY_NUMBER: u32 = 0x30;
+const LANGUAGE_SIZE: u32 = 64;
 const HEADER_SEPERATOR_COUNT: u32 = 14;
+const LONG_HEADER_FIELDS: usize = 5;
+const SHORT_HEADER_FIELDS: usize = 4;
+const STATIC_HEADER_FIELDS_SIZE: usize =
+    LONG_HEADER_FIELDS * mem::size_of::<u32>() + SHORT_HEADER_FIELDS * mem::size_of::<u16>();
 
 fn read_string(size: u32, reader: &mut dyn Read) -> io::Result<String> {
     let mut s = String::new();
@@ -39,20 +46,44 @@ impl FalloutNVHeader {
         (self.save_img_width, self.save_img_height)
     }
 
+    fn pc_name_len(&self) -> u32 {
+        self.pc_name.len() as u32
+    }
+    fn pc_title_len(&self) -> u32 {
+        self.pc_title.len() as u32
+    }
+    fn pc_location_len(&self) -> u32 {
+        self.pc_location.len() as u32
+    }
+    fn playtime_len(&self) -> u32 {
+        self.playtime.len() as u32
+    }
+
     pub fn header_size(&self) -> u32 {
-        MAGIC_ID_SIZE + LANGUAGE_SIZE
+        let size: u32 = self.pc_name_len()
+            + self.pc_title_len()
+            + self.pc_location_len()
+            + self.playtime_len()
+            + STATIC_HEADER_FIELDS_SIZE as u32
+            + LANGUAGE_SIZE
+            + HEADER_SEPERATOR_COUNT;
+        size
     }
 
     pub fn read_from(reader: &mut dyn Read) -> Result<Self, io::Error> {
         let magic_id = read_string(MAGIC_ID_SIZE, reader)?;
 
-        if magic_id != *"FO3SAVEGAME" {
+        if magic_id != *MAGIC_ID {
             let e = io::Error::new(ErrorKind::InvalidInput, "File Header error");
             return Err(e);
         }
 
         let _header_size = reader.read_u32::<LittleEndian>()?;
-        let _header_mystery = reader.read_u32::<LittleEndian>()?;
+        let header_mystery = reader.read_u32::<LittleEndian>()?;
+        if header_mystery != MYSTERY_NUMBER {
+            let e = io::Error::new(ErrorKind::InvalidInput, "File Header error");
+            return Err(e);
+        }
         reader.read_u8()?;
 
         let language = read_string(LANGUAGE_SIZE, reader)?;
@@ -89,16 +120,16 @@ impl FalloutNVHeader {
         let playtime = read_string(playtime_len, reader)?;
         reader.read_u8()?;
 
-        Ok(Self{
-                language,
-                save_img_width,
-                save_img_height,
-                save_number,
-                pc_name,
-                pc_title,
-                pc_level,
-                pc_location,
-                playtime,
+        Ok(Self {
+            language,
+            save_img_width,
+            save_img_height,
+            save_number,
+            pc_name,
+            pc_title,
+            pc_level,
+            pc_location,
+            playtime,
         })
     }
 }

@@ -1,4 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use image::ImageBuffer;
 use std::io::{self, ErrorKind, Read};
 use std::mem;
 
@@ -131,6 +132,26 @@ impl FalloutNVHeader {
             pc_location,
             playtime,
         })
+    }
+
+    pub fn extract_image(self, reader: &mut dyn Read) -> io::Result<()> {
+        let mut imgbuf = ImageBuffer::new(self.save_img_width, self.save_img_height);
+        for (_x, _y, pixel) in imgbuf.enumerate_pixels_mut() {
+            let r = reader.read_u8()?;
+            let g = reader.read_u8()?;
+            let b = reader.read_u8()?;
+            *pixel = image::Rgb([r, g, b]);
+        }
+        let file_name = format!(
+            "Save_{}_{}_{}_{}.png",
+            self.save_number,
+            self.pc_name.replace(' ', "_"),
+            self.pc_location.replace(' ', "_"),
+            self.playtime.replace("00", "0").replace('.', "_")
+        );
+        imgbuf.save(file_name).unwrap();
+
+        Ok(())
     }
 }
 
